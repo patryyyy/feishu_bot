@@ -95,13 +95,8 @@ class WeatherData {
   String toString() {
     StringBuffer str = StringBuffer();
     DateTime now = DateTime.now();
-    if (now.second < 10) {
-      str.write(
-          "$province-$city ${now.year}-${now.month}-${now.day} ${now.hour}:${now.minute}:0${now.second}\n");
-    } else {
-      str.write(
-          "$province-$city ${now.year}-${now.month}-${now.day} ${now.hour}:${now.minute}:${now.second}\n");
-    }
+    str.write("${now.toString().substring(0, 19)}\n");
+
     str.writeln("天气: $weather");
     str.writeln("温度: $temperature℃");
     str.writeln("风向: $winddirection");
