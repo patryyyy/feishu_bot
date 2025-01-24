@@ -1,26 +1,32 @@
+// Dart imports:
 import 'dart:convert';
 
+// Package imports:
 import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 
 class FeishuBot {
-  String _webhookUrl;
-  String? _signature;
+  final String _webhookUrl;
+  final String? _signature;
 
   FeishuBot(this._webhookUrl, [this._signature]);
 
   Future<void> sendMessage(Message message) async {
     Map<String, dynamic> msg = message.msg;
 
-    if (this._signature != null) {
+    if (_signature != null) {
       int timestamp = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      String sign = _generateSecret(this._signature!, timestamp);
+      String sign = _generateSecret(_signature!, timestamp);
 
       msg["timestamp"] = timestamp.toString();
       msg["sign"] = sign;
     }
 
-    await Dio().post(this._webhookUrl, data: jsonEncode(msg));
+    await Dio().post(
+      _webhookUrl,
+      data: jsonEncode(msg),
+      queryParameters: {"Content-Type": "application/json"},
+    );
   }
 
   String _generateSecret(String secret, int timestamp) {
@@ -36,61 +42,52 @@ class FeishuBot {
 }
 
 class Message {
-  Map<String, dynamic>? _msg;
+  late final Map<String, dynamic> msg;
 
-  Message(String msg) {
-    Map<String, dynamic> str = {
+  Message() {
+    msg = {
       "msg_type": "text",
-      "content": {"text": "$msg"}
+      "content": {"text": msg},
     };
-
-    this._msg = str;
   }
 
-  Map<String, dynamic> get msg {
-    return this._msg!;
+  static String escapeJson(String input) {
+    return input
+        .replaceAll(r'\', r'\\') // 转义反斜杠
+        .replaceAll('"', r'\"') // 转义双引号
+        .replaceAll('\n', r'\n') // 转义换行符
+        .replaceAll('\r', r'\r') // 转义回车符
+        .replaceAll('\t', r'\t'); // 转义制表符
   }
 }
 
-class MessageCard implements Message {
+class SimpleCard implements Message {
   @override
-  Map<String, dynamic>? _msg;
+  late final Map<String, dynamic> msg;
 
-  MessageCard(String title, String content, [String? url]) {
-    Map<String, dynamic> str = {
+  SimpleCard({
+    required String title,
+    required String content,
+    required String urlDesc,
+    required String urlHoverDesc,
+    required String url,
+  }) {
+    msg = {
       "msg_type": "interactive",
       "card": {
-        "header": {
-          "title": {"content": "$title", "tag": "plain_text"}
-        },
-        "elements": [
-          {
-            "tag": "div",
-            "text": {"content": "$content", "tag": "lark_md"}
-          },
-        ]
+        "type": "template",
+        "data": {
+          "template_id": "AAqF8ubMRVDNV",
+          "template_version_name": "1.0.0",
+          "template_variable": {
+            "title": title,
+            "content": content,
+            "url_desc": urlDesc,
+            "url_hover_desc": urlHoverDesc,
+            "url": url,
+          }
+        }
       }
     };
-
-    if (url != null) {
-      (str["card"]["elements"] as List).add({
-        "actions": [
-          {
-            "tag": "button",
-            "text": {"content": "更多信息", "tag": "lark_md"},
-            "url": "$url",
-            "type": "default",
-            "value": {}
-          }
-        ],
-        "tag": "action"
-      });
-    }
-    this._msg = str;
-  }
-
-  @override
-  Map<String, dynamic> get msg {
-    return this._msg!;
   }
 }
